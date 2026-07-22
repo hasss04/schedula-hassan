@@ -1,17 +1,19 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { DoctorController } from './doctors/doctors.controller';
-import { PatientController } from './patients/patients.controller';
+import { DoctorsModule } from './doctors/doctors.module';
+import { PatientsModule } from './patients/patients.module';
 import { User } from './users/user.entity';
+import { Doctor } from './doctors/doctors.entity';
+import { Patient } from './patients/patients.entity';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST,
@@ -19,12 +21,15 @@ import { User } from './users/user.entity';
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      entities: [User],
+      entities: [User, Doctor, Patient],
       synchronize: false,
     }),
     AuthModule,
     UsersModule,
+    DoctorsModule,
+    PatientsModule,
   ],
-  controllers: [DoctorController, PatientController],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}
