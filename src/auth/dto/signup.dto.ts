@@ -1,38 +1,18 @@
-import {
-  IsEmail,
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  MinLength,
-} from 'class-validator';
+import { IsEmail, IsEnum, IsNotEmpty, IsString, MinLength } from 'class-validator';
 import { UserRole } from '../../users/user.entity';
 
 export class SignupDto {
-  @IsNotEmpty()
   @IsString()
+  @IsNotEmpty()
   name!: string;
 
   @IsEmail()
   email!: string;
 
-  @IsNotEmpty()
   @IsString()
-  @MinLength(8)
+  @MinLength(6)
   password!: string;
 
   @IsEnum(UserRole)
   role!: UserRole;
-
-  @IsOptional()
-  @IsString()
-  registrationId?: string;
-
-  @IsOptional()
-  @IsString()
-  qualificationSummary?: string;
-
-  @IsOptional()
-  @IsString()
-  specialization?: string;
 }

@@ -9,15 +9,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: 'schedula-secret-key',
+      secretOrKey: process.env.JWT_SECRET || 'schedula_jwt_secret',
     });
   }
 
-  async validate(payload: any) {
+  async validate(payload: { sub: number; email: string; role: string; name: string }) {
     const user = await this.authService.validateUser(payload.sub);
 
     if (!user) {
-      throw new UnauthorizedException('Invalid token');
+      throw new UnauthorizedException();
     }
 
     return user;

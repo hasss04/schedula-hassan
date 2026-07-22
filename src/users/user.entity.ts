@@ -19,7 +19,10 @@ export class User {
   @Column({ length: 255 })
   password!: string;
 
-  @Column({ type: 'varchar', length: 20 })
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+  })
   role!: UserRole;
 
   @CreateDateColumn({ name: 'created_at' })

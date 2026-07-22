@@ -3,11 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { DoctorsModule } from './doctors/doctors.module';
-import { PatientsModule } from './patients/patients.module';
+import { DoctorController } from './doctors/doctors.controller';
+import { PatientController } from './patients/patients.controller';
 import { User } from './users/user.entity';
-import { Doctor } from './doctors/doctors.entity';
-import { Patient } from './patients/patients.entity';
 
 @Module({
   imports: [
@@ -21,13 +19,12 @@ import { Patient } from './patients/patients.entity';
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      entities: [User, Doctor, Patient],
+      entities: [User],
       synchronize: false,
     }),
     AuthModule,
     UsersModule,
-    DoctorsModule,
-    PatientsModule,
   ],
+  controllers: [DoctorController, PatientController],
 })
 export class AppModule {}
