@@ -1,18 +1,30 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/user.entity';
+import { PatientsService } from './patients.service';
+import { CreatePatientProfileDto } from './dto/create-patient-profile.dto';
+import { UpdatePatientProfileDto } from './dto/update-patient-profile.dto';
 
 @Controller('patient')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.PATIENT)
 export class PatientController {
+  constructor(private readonly patientsService: PatientsService) {}
+
+  @Post('profile')
+  createProfile(@Req() req: any, @Body() dto: CreatePatientProfileDto) {
+    return this.patientsService.create(req.user.id, dto);
+  }
+
   @Get('profile')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PATIENT)
-  getPatientProfile(@Req() req: any) {
-    return {
-      message: 'Welcome Patient',
-      user: req.user,
-    };
+  getProfile(@Req() req: any) {
+    return this.patientsService.getByUserId(req.user.id);
+  }
+
+  @Patch('profile')
+  updateProfile(@Req() req: any, @Body() dto: UpdatePatientProfileDto) {
+    return this.patientsService.update(req.user.id, dto);
   }
 }
