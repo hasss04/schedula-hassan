@@ -19,13 +19,14 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { UserRole } from "../users/user.entity";
+import { Role } from '../auth/enums/role.enum';
 
 interface AuthenticatedRequest extends Request {
   user: { id: number; role: UserRole; [key: string]: any };
 }
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.DOCTOR)
+@Roles(Role.DOCTOR)
 @Controller("doctor/availability")
 export class DoctorAvailabilityController {
   constructor(private readonly service: DoctorAvailabilityService) {}

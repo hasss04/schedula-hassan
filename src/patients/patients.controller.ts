@@ -3,13 +3,14 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/user.entity';
+import { Role } from '../auth/enums/role.enum';
 import { PatientsService } from './patients.service';
 import { CreatePatientProfileDto } from './dto/create-patient-profile.dto';
 import { UpdatePatientProfileDto } from './dto/update-patient-profile.dto';
 
 @Controller('patient')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.PATIENT)
+@Roles(Role.PATIENT)
 export class PatientController {
   constructor(private readonly patientsService: PatientsService) {}
 
