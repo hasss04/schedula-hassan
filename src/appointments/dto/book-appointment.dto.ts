@@ -17,14 +17,4 @@ export class BookAppointmentDto {
   @IsString()
   @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
   endTime?: string;
-
-  @IsOptional()
-  @IsString()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
-  waveWindowStart?: string;
-
-  @IsOptional()
-  @IsString()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
-  waveWindowEnd?: string;
 }

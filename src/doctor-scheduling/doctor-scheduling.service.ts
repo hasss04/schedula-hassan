@@ -26,10 +26,23 @@ export class DoctorSchedulingService {
     bufferTime?: number | null;
     maxCapacity?: number | null;
   }) {
+    if (!dto.schedulingType) {
+      throw new BadRequestException('schedulingType is required');
+    }
+
     if (dto.schedulingType === SchedulingType.STREAM) {
-      if (!dto.slotDuration || dto.slotDuration <= 0) {
+      if (dto.slotDuration !== undefined && dto.slotDuration !== null) {
         throw new BadRequestException(
-          'slotDuration is required and must be greater than 0 for STREAM scheduling',
+          'slotDuration is not allowed for STREAM scheduling',
+        );
+      }
+
+      if (
+        dto.maxCapacity !== undefined &&
+        dto.maxCapacity !== null
+      ) {
+        throw new BadRequestException(
+          'maxCapacity is not allowed for STREAM scheduling',
         );
       }
 
@@ -40,28 +53,25 @@ export class DoctorSchedulingService {
       ) {
         throw new BadRequestException('bufferTime cannot be negative');
       }
-
-      if (dto.maxCapacity !== undefined && dto.maxCapacity !== null) {
-        throw new BadRequestException(
-          'maxCapacity is not allowed for STREAM scheduling',
-        );
-      }
     }
 
     if (dto.schedulingType === SchedulingType.WAVE) {
+      if (!dto.slotDuration || dto.slotDuration <= 0) {
+        throw new BadRequestException(
+          'slotDuration is required and must be greater than 0 for WAVE scheduling',
+        );
+      }
+
       if (!dto.maxCapacity || dto.maxCapacity <= 0) {
         throw new BadRequestException(
           'maxCapacity is required and must be greater than 0 for WAVE scheduling',
         );
       }
 
-      if (dto.slotDuration !== undefined && dto.slotDuration !== null) {
-        throw new BadRequestException(
-          'slotDuration is not allowed for WAVE scheduling',
-        );
-      }
-
-      if (dto.bufferTime !== undefined && dto.bufferTime !== null) {
+      if (
+        dto.bufferTime !== undefined &&
+        dto.bufferTime !== null
+      ) {
         throw new BadRequestException(
           'bufferTime is not allowed for WAVE scheduling',
         );
@@ -98,7 +108,7 @@ export class DoctorSchedulingService {
       doctorId: doctor.id,
       schedulingType: dto.schedulingType,
       slotDuration:
-        dto.schedulingType === SchedulingType.STREAM
+        dto.schedulingType === SchedulingType.WAVE
           ? dto.slotDuration ?? null
           : null,
       bufferTime:
@@ -169,7 +179,7 @@ export class DoctorSchedulingService {
     } = {
       schedulingType: nextSchedulingType,
       slotDuration:
-        nextSchedulingType === SchedulingType.STREAM
+        nextSchedulingType === SchedulingType.WAVE
           ? dto.slotDuration !== undefined
             ? dto.slotDuration
             : config.slotDuration
