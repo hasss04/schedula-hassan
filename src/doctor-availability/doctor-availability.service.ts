@@ -4,18 +4,18 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-} from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { RecurringAvailability } from "./entities/recurring-availability.entity";
-import { CustomAvailability } from "./entities/custom-availability.entity";
-import { CreateRecurringAvailabilityDto } from "./dto/create-recurring-availability.dto";
-import { UpdateRecurringAvailabilityDto } from "./dto/update-recurring-availability.dto";
-import { CreateOverrideDto } from "./dto/create-override.dto";
-import { DayOfWeek } from "./day-of-week.enum";
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { RecurringAvailability } from './entities/recurring-availability.entity';
+import { CustomAvailability } from './entities/custom-availability.entity';
+import { CreateRecurringAvailabilityDto } from './dto/create-recurring-availability.dto';
+import { UpdateRecurringAvailabilityDto } from './dto/update-recurring-availability.dto';
+import { CreateOverrideDto } from './dto/create-override.dto';
+import { DayOfWeek } from './day-of-week.enum';
 
 function toMinutes(time: string): number {
-  const [h, m] = time.split(":").map(Number);
+  const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
 }
 
@@ -45,13 +45,13 @@ export class DoctorAvailabilityService {
     @InjectRepository(RecurringAvailability)
     private readonly recurringRepo: Repository<RecurringAvailability>,
     @InjectRepository(CustomAvailability)
-    private readonly customRepo: Repository<CustomAvailability>
+    private readonly customRepo: Repository<CustomAvailability>,
   ) {}
 
   private validateTimeRange(startTime: string, endTime: string) {
     if (toMinutes(startTime) >= toMinutes(endTime)) {
       throw new BadRequestException(
-        "Invalid time range: startTime must be before endTime"
+        'Invalid time range: startTime must be before endTime',
       );
     }
   }
@@ -59,10 +59,11 @@ export class DoctorAvailabilityService {
   private hasOverlap(
     startTime: string,
     endTime: string,
-    existing: { startTime: string; endTime: string }[]
+    existing: { startTime: string; endTime: string }[],
   ): boolean {
     const newStart = toMinutes(startTime);
     const newEnd = toMinutes(endTime);
+
     return existing.some((slot) => {
       const existingStart = toMinutes(slot.startTime);
       const existingEnd = toMinutes(slot.endTime);
@@ -70,8 +71,10 @@ export class DoctorAvailabilityService {
     });
   }
 
-  //Recurring Availability
-  async createRecurring(doctorId: number, dto: CreateRecurringAvailabilityDto) {
+  async createRecurring(
+    doctorId: number,
+    dto: CreateRecurringAvailabilityDto,
+  ) {
     this.validateTimeRange(dto.startTime, dto.endTime);
 
     const existingForDay = await this.recurringRepo.find({
@@ -79,17 +82,19 @@ export class DoctorAvailabilityService {
     });
 
     const isDuplicate = existingForDay.some(
-      (slot) => slot.startTime === dto.startTime && slot.endTime === dto.endTime
+      (slot) =>
+        slot.startTime === dto.startTime && slot.endTime === dto.endTime,
     );
+
     if (isDuplicate) {
       throw new ConflictException(
-        "Duplicate availability entry for this day and time"
+        'Duplicate availability entry for this day and time',
       );
     }
 
     if (this.hasOverlap(dto.startTime, dto.endTime, existingForDay)) {
       throw new ConflictException(
-        "This time slot overlaps with an existing availability slot"
+        'This time slot overlaps with an existing availability slot',
       );
     }
 
@@ -106,24 +111,24 @@ export class DoctorAvailabilityService {
   async getAllRecurring(doctorId: number) {
     return this.recurringRepo.find({
       where: { doctorId },
-      order: { dayOfWeek: "ASC", startTime: "ASC" },
+      order: { dayOfWeek: 'ASC', startTime: 'ASC' },
     });
   }
 
   async updateRecurring(
     doctorId: number,
     id: number,
-    dto: UpdateRecurringAvailabilityDto
+    dto: UpdateRecurringAvailabilityDto,
   ) {
     const existing = await this.recurringRepo.findOne({ where: { id } });
 
     if (!existing) {
-      throw new NotFoundException("Availability slot not found");
+      throw new NotFoundException('Availability slot not found');
     }
 
     if (existing.doctorId !== doctorId) {
       throw new ForbiddenException(
-        "You are not authorized to modify this availability slot"
+        'You are not authorized to modify this availability slot',
       );
     }
 
@@ -136,20 +141,22 @@ export class DoctorAvailabilityService {
     const siblingSlots = await this.recurringRepo.find({
       where: { doctorId, dayOfWeek },
     });
+
     const otherSlots = siblingSlots.filter((slot) => slot.id !== id);
 
     const isDuplicate = otherSlots.some(
-      (slot) => slot.startTime === startTime && slot.endTime === endTime
+      (slot) => slot.startTime === startTime && slot.endTime === endTime,
     );
+
     if (isDuplicate) {
       throw new ConflictException(
-        "Duplicate availability entry for this day and time"
+        'Duplicate availability entry for this day and time',
       );
     }
 
     if (this.hasOverlap(startTime, endTime, otherSlots)) {
       throw new ConflictException(
-        "This time slot overlaps with an existing availability slot"
+        'This time slot overlaps with an existing availability slot',
       );
     }
 
@@ -164,24 +171,22 @@ export class DoctorAvailabilityService {
     const existing = await this.recurringRepo.findOne({ where: { id } });
 
     if (!existing) {
-      throw new NotFoundException("Availability slot not found");
+      throw new NotFoundException('Availability slot not found');
     }
 
     if (existing.doctorId !== doctorId) {
       throw new ForbiddenException(
-        "You are not authorized to delete this availability slot"
+        'You are not authorized to delete this availability slot',
       );
     }
 
     await this.recurringRepo.remove(existing);
-    return { success: true, message: "Availability slot deleted successfully" };
+    return { success: true, message: 'Availability slot deleted successfully' };
   }
-
-  //Custom Override Availability
 
   async createOverride(doctorId: number, dto: CreateOverrideDto) {
     if (!isValidDate(dto.date)) {
-      throw new BadRequestException("Invalid date. Use YYYY-MM-DD format");
+      throw new BadRequestException('Invalid date. Use YYYY-MM-DD format');
     }
 
     this.validateTimeRange(dto.startTime, dto.endTime);
@@ -191,17 +196,19 @@ export class DoctorAvailabilityService {
     });
 
     const isDuplicate = existingForDate.some(
-      (slot) => slot.startTime === dto.startTime && slot.endTime === dto.endTime
+      (slot) =>
+        slot.startTime === dto.startTime && slot.endTime === dto.endTime,
     );
+
     if (isDuplicate) {
       throw new ConflictException(
-        "Duplicate override entry for this date and time"
+        'Duplicate override entry for this date and time',
       );
     }
 
     if (this.hasOverlap(dto.startTime, dto.endTime, existingForDate)) {
       throw new ConflictException(
-        "This override time slot overlaps with an existing override for this date"
+        'This override time slot overlaps with an existing override for this date',
       );
     }
 
@@ -217,18 +224,18 @@ export class DoctorAvailabilityService {
 
   async getAvailabilityForDate(doctorId: number, date: string) {
     if (!isValidDate(date)) {
-      throw new BadRequestException("Invalid date. Use YYYY-MM-DD format");
+      throw new BadRequestException('Invalid date. Use YYYY-MM-DD format');
     }
 
     const overrides = await this.customRepo.find({
       where: { doctorId, date },
-      order: { startTime: "ASC" },
+      order: { startTime: 'ASC' },
     });
 
     if (overrides.length > 0) {
       return {
         date,
-        source: "override",
+        source: 'custom',
         slots: overrides.map((o) => ({
           startTime: o.startTime,
           endTime: o.endTime,
@@ -239,12 +246,12 @@ export class DoctorAvailabilityService {
     const dayOfWeek = getDayOfWeekFromDate(date);
     const recurring = await this.recurringRepo.find({
       where: { doctorId, dayOfWeek },
-      order: { startTime: "ASC" },
+      order: { startTime: 'ASC' },
     });
 
     return {
       date,
-      source: "recurring",
+      source: 'recurring',
       dayOfWeek,
       slots: recurring.map((r) => ({
         startTime: r.startTime,
