@@ -11,6 +11,7 @@ import {
 import { Doctor } from '../../doctors/doctors.entity';
 import { User } from '../../users/user.entity';
 import { SchedulingType } from '../../doctor-scheduling/enums/scheduling-type.enum';
+import { AppointmentStatus } from '../enums/appointment-status.enum';
 
 @Entity('appointments')
 @Index(['doctorId', 'appointmentDate'])
@@ -53,8 +54,13 @@ export class Appointment {
   @Column({ name: 'token_number', type: 'int', nullable: true })
   tokenNumber!: number | null;
 
-  @Column({ name: 'status', type: 'varchar', length: 20, default: 'BOOKED' })
-  status!: string;
+  @Column({
+    name: 'status',
+    type: 'varchar',
+    length: 20,
+    default: AppointmentStatus.BOOKED,
+  })
+  status!: AppointmentStatus;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

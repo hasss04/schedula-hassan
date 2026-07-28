@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,6 +13,8 @@ import { SchedulingType } from '../doctor-scheduling/enums/scheduling-type.enum'
 import { RecurringAvailability } from '../doctor-availability/entities/recurring-availability.entity';
 import { CustomAvailability } from '../doctor-availability/entities/custom-availability.entity';
 import { DayOfWeek } from '../doctor-availability/day-of-week.enum';
+import { AppointmentStatus } from './enums/appointment-status.enum';
+import { Doctor } from '../doctors/doctors.entity';
 
 function toMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number);
@@ -49,6 +52,8 @@ export class AppointmentsService {
     private readonly recurringRepo: Repository<RecurringAvailability>,
     @InjectRepository(CustomAvailability)
     private readonly customRepo: Repository<CustomAvailability>,
+    @InjectRepository(Doctor)
+    private readonly doctorRepo: Repository<Doctor>,
   ) {}
 
   async book(patientId: number, dto: BookAppointmentDto) {
@@ -88,6 +93,81 @@ export class AppointmentsService {
     throw new BadRequestException('Unsupported scheduling type');
   }
 
+  async getMyAppointments(patientId: number) {
+    const appointments = await this.appointmentRepo.find({
+      where: { patientId },
+      relations: {
+        doctor: true,
+        patient: true,
+      },
+      order: {
+        appointmentDate: 'DESC',
+        createdAt: 'DESC',
+      },
+    });
+
+    return {
+      count: appointments.length,
+      appointments,
+    };
+  }
+
+  async cancelAppointment(patientId: number, appointmentId: number) {
+    const appointment = await this.appointmentRepo.findOne({
+      where: { id: appointmentId },
+      relations: {
+        doctor: true,
+        patient: true,
+      },
+    });
+
+    if (!appointment) {
+      throw new NotFoundException('Appointment not found');
+    }
+
+    if (appointment.patientId !== patientId) {
+      throw new ForbiddenException(
+        'You are not allowed to cancel this appointment',
+      );
+    }
+
+    if (appointment.status === AppointmentStatus.CANCELLED) {
+      throw new BadRequestException('Appointment is already cancelled');
+    }
+
+    this.validateCancelableDate(appointment.appointmentDate);
+
+    appointment.status = AppointmentStatus.CANCELLED;
+    return this.appointmentRepo.save(appointment);
+  }
+
+  async getDoctorAppointments(userId: number) {
+    const doctor = await this.doctorRepo.findOne({
+      where: { userId },
+    });
+
+    if (!doctor) {
+      throw new NotFoundException('Doctor profile not found');
+    }
+
+    const appointments = await this.appointmentRepo.find({
+      where: { doctorId: doctor.id },
+      relations: {
+        patient: true,
+        doctor: true,
+      },
+      order: {
+        appointmentDate: 'DESC',
+        createdAt: 'DESC',
+      },
+    });
+
+    return {
+      count: appointments.length,
+      appointments,
+    };
+  }
+
   private validateFutureDate(date: string) {
     const today = new Date();
     const input = new Date(`${date}T00:00:00`);
@@ -95,6 +175,16 @@ export class AppointmentsService {
 
     if (input < today) {
       throw new BadRequestException('Appointment date cannot be in the past');
+    }
+  }
+
+  private validateCancelableDate(date: string) {
+    const today = new Date();
+    const input = new Date(`${date}T00:00:00`);
+    today.setHours(0, 0, 0, 0);
+
+    if (input < today) {
+      throw new BadRequestException('Past appointments cannot be cancelled');
     }
   }
 
@@ -175,7 +265,7 @@ export class AppointmentsService {
         appointmentDate: dto.appointmentDate,
         startTime: dto.startTime,
         endTime: dto.endTime,
-        status: 'BOOKED',
+        status: AppointmentStatus.BOOKED,
       },
     });
 
@@ -190,7 +280,7 @@ export class AppointmentsService {
         appointmentDate: dto.appointmentDate,
       })
       .andWhere('a.status IN (:...statuses)', {
-        statuses: ['BOOKED', 'CONFIRMED'],
+        statuses: [AppointmentStatus.BOOKED, AppointmentStatus.CONFIRMED],
       })
       .andWhere('a.schedulingType = :schedulingType', {
         schedulingType: SchedulingType.STREAM,
@@ -213,7 +303,7 @@ export class AppointmentsService {
       waveWindowStart: null,
       waveWindowEnd: null,
       tokenNumber: null,
-      status: 'BOOKED',
+      status: AppointmentStatus.BOOKED,
     });
 
     return this.appointmentRepo.save(appointment);
@@ -247,7 +337,10 @@ export class AppointmentsService {
       );
     }
 
-    if (toMinutes(dto.endTime) - toMinutes(dto.startTime) !== config.slotDuration) {
+    if (
+      toMinutes(dto.endTime) - toMinutes(dto.startTime) !==
+      config.slotDuration
+    ) {
       throw new BadRequestException(
         `Wave window must match configured duration of ${config.slotDuration} minutes`,
       );
@@ -266,7 +359,7 @@ export class AppointmentsService {
         appointmentDate: dto.appointmentDate,
         waveWindowStart: dto.startTime,
         waveWindowEnd: dto.endTime,
-        status: 'BOOKED',
+        status: AppointmentStatus.BOOKED,
       },
     });
 
@@ -280,7 +373,7 @@ export class AppointmentsService {
         appointmentDate: dto.appointmentDate,
         waveWindowStart: dto.startTime,
         waveWindowEnd: dto.endTime,
-        status: 'BOOKED',
+        status: AppointmentStatus.BOOKED,
       },
     });
 
@@ -300,7 +393,7 @@ export class AppointmentsService {
       waveWindowStart: dto.startTime,
       waveWindowEnd: dto.endTime,
       tokenNumber,
-      status: 'BOOKED',
+      status: AppointmentStatus.BOOKED,
     });
 
     return this.appointmentRepo.save(appointment);
