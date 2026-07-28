@@ -13,6 +13,7 @@ import { CreateRecurringAvailabilityDto } from './dto/create-recurring-availabil
 import { UpdateRecurringAvailabilityDto } from './dto/update-recurring-availability.dto';
 import { CreateOverrideDto } from './dto/create-override.dto';
 import { DayOfWeek } from './day-of-week.enum';
+import { Doctor } from '../doctors/doctors.entity';
 
 function toMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number);
@@ -44,8 +45,12 @@ export class DoctorAvailabilityService {
   constructor(
     @InjectRepository(RecurringAvailability)
     private readonly recurringRepo: Repository<RecurringAvailability>,
+
     @InjectRepository(CustomAvailability)
     private readonly customRepo: Repository<CustomAvailability>,
+
+    @InjectRepository(Doctor)
+    private readonly doctorRepo: Repository<Doctor>,
   ) {}
 
   private validateTimeRange(startTime: string, endTime: string) {
@@ -71,10 +76,24 @@ export class DoctorAvailabilityService {
     });
   }
 
+  private async getDoctorIdFromUserId(userId: number): Promise<number> {
+    const doctor = await this.doctorRepo.findOne({
+      where: { userId },
+    });
+
+    if (!doctor) {
+      throw new NotFoundException('Doctor profile not found for this user');
+    }
+
+    return doctor.id;
+  }
+
   async createRecurring(
-    doctorId: number,
+    userId: number,
     dto: CreateRecurringAvailabilityDto,
   ) {
+    const doctorId = await this.getDoctorIdFromUserId(userId);
+
     this.validateTimeRange(dto.startTime, dto.endTime);
 
     const existingForDay = await this.recurringRepo.find({
@@ -108,7 +127,9 @@ export class DoctorAvailabilityService {
     return this.recurringRepo.save(entity);
   }
 
-  async getAllRecurring(doctorId: number) {
+  async getAllRecurring(userId: number) {
+    const doctorId = await this.getDoctorIdFromUserId(userId);
+
     return this.recurringRepo.find({
       where: { doctorId },
       order: { dayOfWeek: 'ASC', startTime: 'ASC' },
@@ -116,10 +137,12 @@ export class DoctorAvailabilityService {
   }
 
   async updateRecurring(
-    doctorId: number,
+    userId: number,
     id: number,
     dto: UpdateRecurringAvailabilityDto,
   ) {
+    const doctorId = await this.getDoctorIdFromUserId(userId);
+
     const existing = await this.recurringRepo.findOne({ where: { id } });
 
     if (!existing) {
@@ -167,7 +190,9 @@ export class DoctorAvailabilityService {
     return this.recurringRepo.save(existing);
   }
 
-  async deleteRecurring(doctorId: number, id: number) {
+  async deleteRecurring(userId: number, id: number) {
+    const doctorId = await this.getDoctorIdFromUserId(userId);
+
     const existing = await this.recurringRepo.findOne({ where: { id } });
 
     if (!existing) {
@@ -184,7 +209,9 @@ export class DoctorAvailabilityService {
     return { success: true, message: 'Availability slot deleted successfully' };
   }
 
-  async createOverride(doctorId: number, dto: CreateOverrideDto) {
+  async createOverride(userId: number, dto: CreateOverrideDto) {
+    const doctorId = await this.getDoctorIdFromUserId(userId);
+
     if (!isValidDate(dto.date)) {
       throw new BadRequestException('Invalid date. Use YYYY-MM-DD format');
     }
@@ -222,7 +249,9 @@ export class DoctorAvailabilityService {
     return this.customRepo.save(entity);
   }
 
-  async getAvailabilityForDate(doctorId: number, date: string) {
+  async getAvailabilityForDate(userId: number, date: string) {
+    const doctorId = await this.getDoctorIdFromUserId(userId);
+
     if (!isValidDate(date)) {
       throw new BadRequestException('Invalid date. Use YYYY-MM-DD format');
     }
@@ -235,7 +264,7 @@ export class DoctorAvailabilityService {
     if (overrides.length > 0) {
       return {
         date,
-        source: 'custom',
+        source: 'override',
         slots: overrides.map((o) => ({
           startTime: o.startTime,
           endTime: o.endTime,
