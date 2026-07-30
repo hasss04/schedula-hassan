@@ -46,12 +46,16 @@ export class AppointmentsService {
   constructor(
     @InjectRepository(Appointment)
     private readonly appointmentRepo: Repository<Appointment>,
+
     @InjectRepository(DoctorScheduleConfig)
     private readonly configRepo: Repository<DoctorScheduleConfig>,
+
     @InjectRepository(RecurringAvailability)
     private readonly recurringRepo: Repository<RecurringAvailability>,
+
     @InjectRepository(CustomAvailability)
     private readonly customRepo: Repository<CustomAvailability>,
+
     @InjectRepository(Doctor)
     private readonly doctorRepo: Repository<Doctor>,
   ) {}
@@ -98,7 +102,6 @@ export class AppointmentsService {
       where: { patientId },
       relations: {
         doctor: true,
-        patient: true,
       },
       order: {
         appointmentDate: 'DESC',
@@ -117,7 +120,6 @@ export class AppointmentsService {
       where: { id: appointmentId },
       relations: {
         doctor: true,
-        patient: true,
       },
     });
 
@@ -162,9 +164,24 @@ export class AppointmentsService {
       },
     });
 
+    const sanitizedAppointments = appointments.map((appointment) => {
+      const { patient, ...rest } = appointment;
+      return {
+        ...rest,
+        patient: patient
+          ? {
+              id: patient.id,
+              name: patient.name,
+              email: patient.email,
+              role: patient.role,
+            }
+          : null,
+      };
+    });
+
     return {
-      count: appointments.length,
-      appointments,
+      count: sanitizedAppointments.length,
+      appointments: sanitizedAppointments,
     };
   }
 
@@ -226,6 +243,23 @@ export class AppointmentsService {
       const slotEnd = toMinutes(slot.endTime);
       return start >= slotStart && end <= slotEnd;
     });
+  }
+
+  private async getNextTokenForStream(
+    doctorId: number,
+    appointmentDate: string,
+  ): Promise<number> {
+    const last = await this.appointmentRepo
+      .createQueryBuilder('a')
+      .select('MAX(a.tokenNumber)', 'max')
+      .where('a.doctorId = :doctorId', { doctorId })
+      .andWhere('a.appointmentDate = :appointmentDate', { appointmentDate })
+      .andWhere('a.schedulingType = :schedulingType', {
+        schedulingType: SchedulingType.STREAM,
+      })
+      .getRawOne();
+
+    return (Number(last?.max) || 0) + 1;
   }
 
   private async bookStream(
@@ -293,6 +327,11 @@ export class AppointmentsService {
       throw new BadRequestException('Selected time slot is already booked');
     }
 
+    const tokenNumber = await this.getNextTokenForStream(
+      dto.doctorId,
+      dto.appointmentDate,
+    );
+
     const appointment = this.appointmentRepo.create({
       doctorId: dto.doctorId,
       patientId,
@@ -302,7 +341,7 @@ export class AppointmentsService {
       endTime: dto.endTime,
       waveWindowStart: null,
       waveWindowEnd: null,
-      tokenNumber: null,
+      tokenNumber,
       status: AppointmentStatus.BOOKED,
     });
 
