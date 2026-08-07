@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { AppointmentsService } from './appointments.service';
 import { BookAppointmentDto } from './dto/book-appointment.dto';
+import { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto'; // NEW
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -39,6 +40,18 @@ export class AppointmentsController {
   @Roles(Role.PATIENT)
   cancelAppointment(@Req() req, @Param('id', ParseIntPipe) id: number) {
     return this.appointmentsService.cancelAppointment(req.user.id, id);
+  }
+
+  // reschedule endpoint
+  @Patch('appointments/:id/reschedule')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.PATIENT)
+  rescheduleAppointment(
+    @Req() req,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: RescheduleAppointmentDto,
+  ) {
+    return this.appointmentsService.reschedule(req.user.id, id, dto);
   }
 
   @Get('doctor/appointments')
