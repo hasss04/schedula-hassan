@@ -5,7 +5,6 @@ import {
   IsString,
   Matches,
   Min,
-  ValidateIf,
 } from 'class-validator';
 
 export class RescheduleAppointmentDto {
@@ -16,29 +15,26 @@ export class RescheduleAppointmentDto {
   @IsDateString()
   appointmentDate!: string;
 
-  // For STREAM rescheduling (concrete time slot)
+  /*
+   * STREAM and WAVE currently use startTime + endTime.
+   * ELASTIC uses startTime + duration.
+   */
   @IsOptional()
   @IsString()
   @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
-  @ValidateIf((o) => !o.waveWindowStart && !o.waveWindowEnd)
   startTime?: string;
 
   @IsOptional()
   @IsString()
   @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
-  @ValidateIf((o) => !o.waveWindowStart && !o.waveWindowEnd)
   endTime?: string;
 
-  // For WAVE rescheduling
+  /*
+   * Required only for ELASTIC rescheduling.
+   * Must be a multiple of the doctor's slotDuration.
+   */
   @IsOptional()
-  @IsString()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
-  @ValidateIf((o) => !o.startTime && !o.endTime)
-  waveWindowStart?: string;
-
-  @IsOptional()
-  @IsString()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
-  @ValidateIf((o) => !o.startTime && !o.endTime)
-  waveWindowEnd?: string;
+  @IsInt()
+  @Min(1)
+  duration?: number;
 }
