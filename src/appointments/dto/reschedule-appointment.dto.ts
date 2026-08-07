@@ -7,7 +7,7 @@ import {
   Min,
 } from 'class-validator';
 
-export class BookAppointmentDto {
+export class RescheduleAppointmentDto {
   @IsInt()
   @Min(1)
   doctorId!: number;
@@ -15,6 +15,10 @@ export class BookAppointmentDto {
   @IsDateString()
   appointmentDate!: string;
 
+  /*
+   * STREAM and WAVE currently use startTime + endTime.
+   * ELASTIC uses startTime + duration.
+   */
   @IsOptional()
   @IsString()
   @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
@@ -26,9 +30,8 @@ export class BookAppointmentDto {
   endTime?: string;
 
   /*
-   * Required when the doctor uses ELASTIC scheduling.
-   * Example: 15, 30, 45, 60.
-   * Must be a multiple of the doctor's configured slotDuration.
+   * Required only for ELASTIC rescheduling.
+   * Must be a multiple of the doctor's slotDuration.
    */
   @IsOptional()
   @IsInt()
